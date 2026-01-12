@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Vimeo Random Video Loader</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+      .wrap { max-width: 900px; margin: 0 auto; }
+      #playerWrap { aspect-ratio: 16 / 9; width: 100%; background: #000; border-radius: 12px; overflow: hidden; }
+      button { margin-top: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
+      #status { margin-top: 10px; font-size: 14px; color: #444; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div id="playerWrap">
+        <div id="vimeo-player"></div>
+      </div>
+
+      <button id="nextBtn" type="button">Click for Random Reel</button>
+      <div id="status"></div>
+    </div>
+
+    <!-- Vimeo Player API -->
+    <script src="https://player.vimeo.com/api/player.js"></script>
+
+    <script>
+      // Put your Vimeo video IDs here (the numeric part of a Vimeo URL).
+      // Example URL: https://vimeo.com/76979871  -> ID is 76979871
+      const VIDEO_URLS = [
+  "https://vimeo.com/928063177/936b848066",
+  "https://vimeo.com/786142641/600a347087",
+  "https://vimeo.com/624722506/3dce4ccdc8",
+  "https://vimeo.com/661260920/cd87bc9c02",
+  "https://vimeo.com/905347576/6a696c7bac",
+  "https://vimeo.com/1099418306/df64763b71",
+  "https://vimeo.com/932922706/b3a771633a",
+  "https://vimeo.com/1026225790/5921e8dd34",
+  "https://vimeo.com/708762944/477d4732a7",
+  "https://vimeo.com/1011159000/2c53d4a680",
+  "https://vimeo.com/340336175/96d4aebf2e",
+  "https://vimeo.com/637544808",
+  "https://vimeo.com/760363005/e4cbf598a9",
+  "https://vimeo.com/684374054/925e7ffffe"
+      ];
+
+      const nextBtn = document.getElementById("nextBtn");
+      const statusEl = document.getElementById("status");
+
+      let currentIndex = 0;
+
+      // Initialize the player with the first video in the list
+      const player = new Vimeo.Player("vimeo-player", {
+        id: VIDEO_IDS[currentIndex],
+        responsive: true
+      });
+
+      function setStatus(msg) {
+        statusEl.textContent = msg || "";
+      }
+
+      function pickNextIndex() {
+        if (VIDEO_IDS.length <= 1) return 0;
+        let next = currentIndex;
+        while (next === currentIndex) {
+          next = Math.floor(Math.random() * VIDEO_IDS.length);
+        }
+        return next;
+      }
+
+      async function loadRandomVideo() {
+        nextBtn.disabled = true;
+        setStatus("Loading…");
+
+        const nextIndex = pickNextIndex();
+        const nextId = VIDEO_IDS[nextIndex];
+
+        try {
+          await player.loadVideo(nextId);
+          currentIndex = nextIndex;
+
+          // Optional: autoplay after load
+          await player.play();
+
+          setStatus(`Loaded video ID: ${nextId}`);
+        } catch (err) {
+          // Common issues: privacy settings, video not found, domain restrictions
+          console.error(err);
+          setStatus(`Failed to load video ID ${nextId}: ${err && err.name ? err.name : "Error"}`);
+        } finally {
+          nextBtn.disabled = false;
+        }
+      }
+
+      nextBtn.addEventListener("click", loadRandomVideo);
+    </script>
+  </body>
+</html>
