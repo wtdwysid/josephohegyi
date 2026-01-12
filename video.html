@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Joseph Ohegyi: Reels</title>
+    <title>Vimeo Random Video Loader (Unlisted)</title>
     <style>
       body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
       .wrap { max-width: 900px; margin: 0 auto; }
       #playerWrap { aspect-ratio: 16 / 9; width: 100%; background: #000; border-radius: 12px; overflow: hidden; }
       button { margin-top: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
       button:disabled { opacity: 0.6; cursor: not-allowed; }
-      #status { margin-top: 10px; font-size: 14px; color: #444; word-break: break-word; }
+      #status { margin-top: 10px; font-size: 14px; color: #444; white-space: pre-wrap; word-break: break-word; }
     </style>
   </head>
   <body>
@@ -19,46 +19,65 @@
         <div id="vimeo-player"></div>
       </div>
 
-      <button id="nextBtn" type="button">Click here for another reel</button>
+      <button id="nextBtn" type="button">Load another video</button>
       <div id="status"></div>
     </div>
 
-    <!-- Vimeo Player API -->
     <script src="https://player.vimeo.com/api/player.js"></script>
 
     <script>
-      /**
-       * For unlisted videos, store FULL URLs that include the privacy hash.
-       * Use either share-link format:
-       *   https://vimeo.com/905347576/6a696c7bac
-       * OR player format:
-       *   https://player.vimeo.com/video/905347576?h=6a696c7bac
-       */
-      const VIDEO_URLS = [
-          "https://vimeo.com/928063177/936b848066",
-  "https://vimeo.com/786142641/600a347087",
-  "https://vimeo.com/624722506/3dce4ccdc8",
-  "https://vimeo.com/661260920/cd87bc9c02",
-  "https://vimeo.com/905347576/6a696c7bac",
-  "https://vimeo.com/1099418306/df64763b71",
-  "https://vimeo.com/932922706/b3a771633a",
-  "https://vimeo.com/1026225790/5921e8dd34",
-  "https://vimeo.com/708762944/477d4732a7",
-  "https://vimeo.com/1011159000/2c53d4a680",
-  "https://vimeo.com/340336175/96d4aebf2e",
-  "https://vimeo.com/637544808",
-  "https://vimeo.com/760363005/e4cbf598a9",
-  "https://vimeo.com/684374054/925e7ffffe"
+      // You can paste either:
+      // - https://vimeo.com/905347576/6a696c7bac
+      // - https://player.vimeo.com/video/905347576?h=6a696c7bac
+      const VIDEO_URLS_RAW = [
+  "https://player.vimeo.com/928063177?h=936b848066",
+  "https://player.vimeo.com/786142641?h=600a347087",
+  "https://player.vimeo.com/624722506?h=3dce4ccdc8",
+  "https://player.vimeo.com/661260920?h=cd87bc9c02",
+  "https://player.vimeo.com/905347576?h=6a696c7bac",
+  "https://player.vimeo.com/1099418306?h=df64763b71",
+  "https://player.vimeo.com/932922706?h=b3a771633a",
+  "https://player.vimeo.com/1026225790?h=5921e8dd34",
+  "https://player.vimeo.com/708762944?h=477d4732a7",
+  "https://player.vimeo.com/1011159000?h=2c53d4a680",
+  "https://player.vimeo.com/340336175?h=96d4aebf2e",
+  "https://player.vimeo.com/637544808",
+  "https://player.vimeo.com/760363005?h=e4cbf598a9",
+  "https://player.vimeo.com/684374054?h=925e7ffffe"
       ];
 
       const nextBtn = document.getElementById("nextBtn");
       const statusEl = document.getElementById("status");
 
-      let currentIndex = 0;
-
       function setStatus(msg) {
         statusEl.textContent = msg || "";
       }
+
+      // Convert share-link unlisted URLs into embed URLs with ?h=...
+      function normalizeVimeoUrl(input) {
+        try {
+          const u = new URL(input);
+
+          // If already in player format, keep it.
+          if (u.hostname === "player.vimeo.com") return input;
+
+          // Match https://vimeo.com/{id}/{hash}
+          const m = u.pathname.match(/^\/(\d+)\/([a-zA-Z0-9]+)$/);
+          if (u.hostname === "vimeo.com" && m) {
+            const [, id, hash] = m;
+            return `https://player.vimeo.com/video/${id}?h=${hash}`;
+          }
+
+          // Fallback: return as-is (may fail if it’s not a supported form)
+          return input;
+        } catch {
+          return input;
+        }
+      }
+
+      const VIDEO_URLS = VIDEO_URLS_RAW.map(normalizeVimeoUrl);
+
+      let currentIndex = 0;
 
       function pickNextIndex() {
         if (VIDEO_URLS.length <= 1) return 0;
@@ -69,7 +88,6 @@
         return next;
       }
 
-      // Initialize the player with the first URL
       const player = new Vimeo.Player("vimeo-player", {
         url: VIDEO_URLS[currentIndex],
         responsive: true
@@ -77,7 +95,7 @@
 
       async function loadRandomVideo() {
         if (!VIDEO_URLS.length) {
-          setStatus("No videos configured. Add URLs to VIDEO_URLS.");
+          setStatus("No videos configured. Add URLs to VIDEO_URLS_RAW.");
           return;
         }
 
@@ -88,25 +106,28 @@
         const nextUrl = VIDEO_URLS[nextIndex];
 
         try {
-          await player.loadVideo(nextUrl);
+          // Passing an object is slightly more robust than a bare string in practice.
+          await player.loadVideo({ url: nextUrl });
           currentIndex = nextIndex;
 
-          // Optional: autoplay after load (remove this line to disable autoplay)
+          // Optional autoplay; remove if you don't want it.
           await player.play();
 
-          setStatus(`Loaded: ${nextUrl}`);
+          setStatus(`Loaded:\n${nextUrl}`);
         } catch (err) {
-          console.error(err);
-          setStatus(`Failed to load: ${nextUrl}\n${(err && err.name) ? err.name : "Error"}`);
+          console.error("Vimeo load error:", err);
+          setStatus(
+            `Failed to load:\n${nextUrl}\n\n` +
+            `Error: ${err?.name || "Error"}\n` +
+            `Message: ${err?.message || "(no message)"}`
+          );
         } finally {
           nextBtn.disabled = false;
         }
       }
 
       nextBtn.addEventListener("click", loadRandomVideo);
-
-      // Optional: show initial loaded URL
-      setStatus(`Loaded: ${VIDEO_URLS[currentIndex] || "(none)"}`);
+      setStatus(`Loaded:\n${VIDEO_URLS[currentIndex] || "(none)"}`);
     </script>
   </body>
 </html>
