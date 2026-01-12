@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Vimeo Random Video Loader</title>
+    <title>Vimeo Random Video Loader (Unlisted URLs)</title>
     <style>
       body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
       .wrap { max-width: 900px; margin: 0 auto; }
       #playerWrap { aspect-ratio: 16 / 9; width: 100%; background: #000; border-radius: 12px; overflow: hidden; }
       button { margin-top: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
       button:disabled { opacity: 0.6; cursor: not-allowed; }
-      #status { margin-top: 10px; font-size: 14px; color: #444; }
+      #status { margin-top: 10px; font-size: 14px; color: #444; word-break: break-word; }
     </style>
   </head>
   <body>
@@ -19,7 +19,7 @@
         <div id="vimeo-player"></div>
       </div>
 
-      <button id="nextBtn" type="button">Click for Random Reel</button>
+      <button id="nextBtn" type="button">Click here for another reel</button>
       <div id="status"></div>
     </div>
 
@@ -27,10 +27,15 @@
     <script src="https://player.vimeo.com/api/player.js"></script>
 
     <script>
-      // Put your Vimeo video IDs here (the numeric part of a Vimeo URL).
-      // Example URL: https://vimeo.com/76979871  -> ID is 76979871
+      /**
+       * For unlisted videos, store FULL URLs that include the privacy hash.
+       * Use either share-link format:
+       *   https://vimeo.com/905347576/6a696c7bac
+       * OR player format:
+       *   https://player.vimeo.com/video/905347576?h=6a696c7bac
+       */
       const VIDEO_URLS = [
-  "https://vimeo.com/928063177/936b848066",
+          "https://vimeo.com/928063177/936b848066",
   "https://vimeo.com/786142641/600a347087",
   "https://vimeo.com/624722506/3dce4ccdc8",
   "https://vimeo.com/661260920/cd87bc9c02",
@@ -51,50 +56,57 @@
 
       let currentIndex = 0;
 
-      // Initialize the player with the first video in the list
-      const player = new Vimeo.Player("vimeo-player", {
-        id: VIDEO_IDS[currentIndex],
-        responsive: true
-      });
-
       function setStatus(msg) {
         statusEl.textContent = msg || "";
       }
 
       function pickNextIndex() {
-        if (VIDEO_IDS.length <= 1) return 0;
+        if (VIDEO_URLS.length <= 1) return 0;
         let next = currentIndex;
         while (next === currentIndex) {
-          next = Math.floor(Math.random() * VIDEO_IDS.length);
+          next = Math.floor(Math.random() * VIDEO_URLS.length);
         }
         return next;
       }
 
+      // Initialize the player with the first URL
+      const player = new Vimeo.Player("vimeo-player", {
+        url: VIDEO_URLS[currentIndex],
+        responsive: true
+      });
+
       async function loadRandomVideo() {
+        if (!VIDEO_URLS.length) {
+          setStatus("No videos configured. Add URLs to VIDEO_URLS.");
+          return;
+        }
+
         nextBtn.disabled = true;
         setStatus("Loading…");
 
         const nextIndex = pickNextIndex();
-        const nextId = VIDEO_IDS[nextIndex];
+        const nextUrl = VIDEO_URLS[nextIndex];
 
         try {
-          await player.loadVideo(nextId);
+          await player.loadVideo(nextUrl);
           currentIndex = nextIndex;
 
-          // Optional: autoplay after load
+          // Optional: autoplay after load (remove this line to disable autoplay)
           await player.play();
 
-          setStatus(`Loaded video ID: ${nextId}`);
+          setStatus(`Loaded: ${nextUrl}`);
         } catch (err) {
-          // Common issues: privacy settings, video not found, domain restrictions
           console.error(err);
-          setStatus(`Failed to load video ID ${nextId}: ${err && err.name ? err.name : "Error"}`);
+          setStatus(`Failed to load: ${nextUrl}\n${(err && err.name) ? err.name : "Error"}`);
         } finally {
           nextBtn.disabled = false;
         }
       }
 
       nextBtn.addEventListener("click", loadRandomVideo);
+
+      // Optional: show initial loaded URL
+      setStatus(`Loaded: ${VIDEO_URLS[currentIndex] || "(none)"}`);
     </script>
   </body>
 </html>
