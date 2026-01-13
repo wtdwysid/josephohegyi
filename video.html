@@ -149,23 +149,33 @@
 
       let bag = [];
 
-      function refillBag() {
-        bag = VIDEO_URLS.map((_, i) => i);
-
-        for (let i = bag.length - 1; i > 0; i--) {
+      function shuffleInPlace(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
-          [bag[i], bag[j]] = [bag[j], bag[i]];
-        }
-
-        if (bag.length > 1 && bag[0] === currentIndex) {
-          const j = 1 + Math.floor(Math.random() * (bag.length - 1));
-          [bag[0], bag[j]] = [bag[j], bag[0]];
+          [arr[i], arr[j]] = [arr[j], arr[i]];
         }
       }
 
+      function startNewCycle(avoidIndex) {
+        bag = VIDEO_URLS.map((_, i) => i);
+        shuffleInPlace(bag);
+
+        if (bag.length > 1 && bag[bag.length - 1] === avoidIndex) {
+          const j = Math.floor(Math.random() * (bag.length - 1));
+          [bag[bag.length - 1], bag[j]] = [bag[j], bag[bag.length - 1]];
+        }
+      }
+
+      startNewCycle(currentIndex);
+      bag = bag.filter((i) => i !== currentIndex);
+
       function nextIndexNoRepeats() {
         if (VIDEO_URLS.length <= 1) return 0;
-        if (bag.length === 0) refillBag();
+
+        if (bag.length === 0) {
+          startNewCycle(currentIndex);
+        }
+
         return bag.pop();
       }
 
