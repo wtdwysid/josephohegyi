@@ -130,14 +130,27 @@
       const nextBtn = document.getElementById("nextBtn");
       let currentIndex = 0;
 
-      function pickNextIndex() {
-        if (VIDEO_URLS.length <= 1) return 0;
-        let next = currentIndex;
-        while (next === currentIndex) {
-          next = Math.floor(Math.random() * VIDEO_URLS.length);
-        }
-        return next;
-      }
+      let bag = [];
+
+function refillBag() {
+  bag = VIDEO_URLS.map((_, i) => i);
+
+  for (let i = bag.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [bag[i], bag[j]] = [bag[j], bag[i]];
+  }
+
+  if (bag.length > 1 && bag[0] === currentIndex) {
+    const j = 1 + Math.floor(Math.random() * (bag.length - 1));
+    [bag[0], bag[j]] = [bag[j], bag[0]];
+  }
+}
+
+function nextIndexNoRepeats() {
+  if (VIDEO_URLS.length <= 1) return 0;
+  if (bag.length === 0) refillBag();
+  return bag.pop();
+}
 
       const player = new Vimeo.Player("vimeo-player", {
         url: VIDEO_URLS[currentIndex],
@@ -149,8 +162,8 @@
 
         nextBtn.disabled = true;
 
-        const nextIndex = pickNextIndex();
-        const nextUrl = VIDEO_URLS[nextIndex];
+const nextIndex = nextIndexNoRepeats();
+		  const nextUrl = VIDEO_URLS[nextIndex];
 
         try {
           await player.loadVideo({ url: nextUrl });
